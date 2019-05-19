@@ -2,25 +2,38 @@ import java.io._
 
 import cats.effect._
 
-object Reader {
+import Patterns._
+
+import scala.collection.mutable.ListBuffer
+
+class Reader(fileName: String) {
+  var variables: Map[String, String] = Map.empty
+  val importList: ListBuffer[String] = new ListBuffer[String]
+
   private def reader[F[_]](file: File)(implicit F: Sync[F]): Resource[F, BufferedReader] =
     Resource.fromAutoCloseable(F.delay {
       new BufferedReader(new FileReader(file))
     })
 
   private def dumpResource[F[_]](res: Resource[F, BufferedReader])(implicit F: Sync[F]): F[Unit] = {
-    val correctPat = "^\\s*(?i)([a-z]\\w*)\\s*=\\s*(\\d+)\\s*$".r
-    val referPat = "^\\s*(?i)([a-z]\\w*)\\s*=\\s*([a-z]\\w*)\\s*$".r
     var count = 0
-
     def loop(in: BufferedReader): F[Unit] =
       F.suspend {
-        val line = in.readLine(); count += 1
+        val line = in.readLine()
+        count += 1
         if (line != null) {
           line match {
-            case correctPat(name, value) => println(s"$name is $value")
-            case referPat(name1, name2) => println(s"$name1 refer to $name2")
-            case _ => println("invalid")
+            case correctPat(name, value) => variables.get(name) match {
+              case None => variables += (name -> value)
+              case Some(_) => throw DuplicateVariable(fileName, count, name)
+            }
+            case referPat(name1, name2) => variables.get(name2) match {
+              case Some(value) => variables += (name1 -> value)
+              case None => println(s"Vse ploho $name1 refer to $name2") // todo find in import files
+            }
+            case lineImportPat(_, _) => parseImports(line)
+            case "" =>
+            case _ => throw IncorrectLine(fileName, count, line)
           }
 
           loop(in)
@@ -28,9 +41,19 @@ object Reader {
           F.unit
         }
       }
+
     res.use(loop)
   }
 
-  def dumpFile[F[_]](file: File)(implicit F: Sync[F]): F[Unit] =
+  def dumpFile[F[_]](file: File)(implicit F: Sync[F]): F[Unit] = {
     dumpResource(reader(file))
+  }
+
+  def parseImports(line: String): Unit = {
+    val imports = filePat.findAllIn(line)
+    while (imports.hasNext) {
+      val file = imports.next()
+      importList += file
+    }
+  }
 }

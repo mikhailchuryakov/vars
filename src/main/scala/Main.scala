@@ -9,6 +9,10 @@ trait Main {
 
 object Main {
   def main(args: Array[String]): Unit = {
-    Reader.dumpFile[IO](new File("C:\\Users\\User\\Desktop\\vars\\src\\main\\resources\\file1.vars")).unsafeRunSync()
+    val file = new File("C:\\Users\\User\\Desktop\\vars\\src\\main\\resources\\file1.vars")
+    val reader = new Reader(file.getName)
+    reader.dumpFile[IO](file).unsafeRunSync()
+    println(reader.variables)
+    println(reader.importList)
   }
 }
