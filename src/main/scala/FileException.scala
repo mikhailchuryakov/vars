@@ -14,5 +14,5 @@ final case class ValueOfVariableAbsentInImports(fileName: String, lineNumber: In
 final case class IncorrectLine(fileName: String, lineNumber: Int, line: String) extends
   FileException(s"file: $fileName; line: $lineNumber; incorrect line: \'$line\'")
 
-final case class RoundImports(fileName1: String, fileName2: String) extends
-  FileException(s"Round imports between files: \'$fileName1\' and \'$fileName2\'")
+final case class CycleImport(fileName1: String, fileName2: String) extends
+  FileException(s"Cycle import between files: \'$fileName1\' and \'$fileName2\'")
