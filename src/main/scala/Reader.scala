@@ -11,7 +11,7 @@ class Reader(val fileName: String, val calledBy: String = "") {
   val importFilesList: ListBuffer[Reader] = new ListBuffer[Reader]
 
   var variables: Map[String, String] = Map.empty
-  var count = 0 // count number of line for exceptions
+  var count = 0 // count of line for exceptions
 
   def dumpFile[F[_]](file: File)(implicit F: Sync[F]): F[Unit] = dumpResource(reader(file))
 
@@ -49,7 +49,7 @@ class Reader(val fileName: String, val calledBy: String = "") {
         case None => findInImportFile(name1, name2)
       }
       // parse imports
-      case lineImportPat(_, _) => parseImports(line)
+      case lineImportPat(_, _) => parseImportsLine(line)
       // new line
       case "" =>
       // other variants
@@ -57,23 +57,30 @@ class Reader(val fileName: String, val calledBy: String = "") {
     }
   }
 
-  private def parseImports(line: String): Unit = {
+  private def parseImportsLine(line: String): Unit = {
     val imports = filePat.findAllIn(line)
-    while (imports.hasNext) { // remove while
-      val file = imports.next()
-      if (!importList.contains(file)) {
-        val reader = new Reader(file, fileName)
-        if (file == calledBy) throw CycleImport(calledBy, fileName)
-        reader.dumpFile[IO](new File(s"C:\\Users\\User\\Desktop\\vars\\src\\main\\resources\\$file.vars")).unsafeRunSync()
-        importFilesList += reader
-        importList += file
+    imports.toList.foreach(file => if (!importList.contains(file)) importList += file)
+  }
+
+  private def parseImportFiles(): Unit = {
+    importList.foreach(file => {
+      Reader.allImports.get(file) match {
+        case Some(reader) =>
+          if (!importFilesList.contains(reader)) importFilesList += reader // use existence
+        case None =>
+          val reader = new Reader(file, fileName)
+          if (file == calledBy) throw CycleImport(calledBy, fileName) // it works only for two-cycle import
+          importFilesList += reader
+          Reader.allImports += (file -> reader)
+          reader.dumpFile[IO](new File(getClass.getResource(s"$file.vars").getPath)).unsafeRunSync()
       }
-    }
+    })
   }
 
   private def findInImportFile(name1: String, name2: String): Unit = {
     var isOneEntry = false
-    var fileNameFirst = ""
+    var fileNameFirst = "" // need for exception message
+    parseImportFiles()
     importFilesList.foreach(file => {
       file.variables.get(name2) match {
         case Some(value) =>
@@ -88,4 +95,8 @@ class Reader(val fileName: String, val calledBy: String = "") {
     })
     if (!isOneEntry) throw ValueOfVariableAbsentInImports(fileName, count, name1)
   }
+}
+
+object Reader {
+  private var allImports: Map[String, Reader] = Map.empty
 }

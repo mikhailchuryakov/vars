@@ -18,7 +18,6 @@ scalacOptions := Seq(
   "-Xexperimental"
 )
 
-val catsVersion       = "1.6.0"
 val catsEffectVersion = "1.1.0"
 
 
