@@ -13,7 +13,6 @@ object Main {
     val reader = new Reader(file.getName)
     reader.dumpFile[IO](file).unsafeRunSync()
     println(reader.variables)
-    println(reader.importList)
-    println(reader.importsMapList.head)
+
   }
 }
