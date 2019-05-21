@@ -1,7 +1,8 @@
 import java.io.File
 
-import Patterns._
+import common.Patterns._
 import cats.effect.IO
+import common.{DuplicateVariable, DuplicateVariableInImports, IncorrectLine, ValueOfVariableAbsentInImports}
 
 object FileParser {
 
@@ -14,33 +15,33 @@ object FileParser {
       }
       // check the line for refer to
       case referPat(name1, name2) => reader.variables.get(name2) match {
-        case Some(value) => reader.variables += (name1 -> value)
+        case Some(value) => reader.variables += (name1 -> value);
         case None => findInImportFile(name1, name2, reader)
       }
       // parse imports
       case lineImportPat(_, _) => parseImportsLine(line, reader)
       // new line
       case "" =>
-      // other variants
+      // other
       case _ => throw IncorrectLine(reader.fileName, reader.count, line)
     }
   }
 
   private def parseImportsLine(line: String, reader: Reader): Unit = {
-    val imports = filePat.findAllIn(line)
+    val imports = filePat.findAllIn(line).drop(1) // drop "import"
     imports.toList.foreach(file => if (!reader.importList.contains(file)) reader.importList += file)
   }
 
   private def parseImportFiles(reader: Reader): Unit = {
-    reader.importList.foreach(file => {
-      Reader.allImports.get(file) match {
+    reader.importList.foreach(fileName => {
+      Reader.allImports.get(fileName) match {
         case Some(value) =>
           if (!reader.importFilesList.contains(value)) reader.importFilesList += value // use existence
         case None =>
-          val reader = new Reader(file)
-          reader.importFilesList += reader
-          Reader.allImports += (file -> reader)
-          reader.dumpFile[IO](new File(getClass.getResource(s"$file.vars").getPath)).unsafeRunSync()
+          val r = new Reader(fileName)
+          reader.importFilesList += r
+          Reader.allImports += (fileName -> r)
+          r.dumpFile[IO](new File(getClass.getResource(s"$fileName.vars").getPath)).unsafeRunSync()
       }
     })
   }

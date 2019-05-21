@@ -1,3 +1,5 @@
+package common
+
 abstract class FileException(message: String) extends Exception(message, null, false, false)
 
 final case class DuplicateVariable(fileName: String, lineNumber: Int, varName: String) extends

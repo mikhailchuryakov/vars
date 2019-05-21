@@ -20,5 +20,6 @@ scalacOptions := Seq(
 
 val catsEffectVersion = "1.1.0"
 
+libraryDependencies += "org.scalatest" % "scalatest_2.12" % "3.0.5" % "test"
 
 libraryDependencies += "org.typelevel" %% "cats-effect" % catsEffectVersion

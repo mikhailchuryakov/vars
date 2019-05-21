@@ -34,8 +34,6 @@ class Reader(val fileName: String) {
 
     res.use(loop)
   }
-
-
 }
 
 object Reader {
